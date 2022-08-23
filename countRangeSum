@@ -1,0 +1,64 @@
+/**
+ * @param {number[]} nums
+ * @param {number} lower
+ * @param {number} upper
+ * @return {number}
+ */
+var countRangeSum = function (nums, lower, upper) {
+    // 前缀和数组
+    let sumArr = [0];
+    for (let i = 0; i < nums.length; i++) sumArr[i + 1] = nums[i] + sumArr[i]
+    let count = 0;
+    // 在归并排序过程中进行满足条件的区间个数的统计
+    function merge_sort(arr, l, r) {
+        if (l >= r) return;
+        let mid = Math.floor((l + r) / 2);
+        merge_sort(arr, l, mid);
+        merge_sort(arr, mid + 1, r);
+        // 统计满足条件的区间和个数
+        countTwoPart(arr, l, mid, mid + 1, r, lower, upper);
+        let p1 = l;
+        let p2 = mid + 1;
+        let temp = new Array(r - l + 1);
+        let k = 0;
+        while (p1 <= mid || p2 <= r) {
+            if (p2 > r || (p1 <= mid && arr[p1] <= arr[p2])) {
+                temp[k++] = arr[p1++];
+            } else temp[k++] = arr[p2++];
+        }
+        for (let i = l; i <= r; i++)arr[i] = temp[i - l];
+    }
+    function countTwoPart(arr, l1, r1, l2, r2, lower, upper) {
+        let k1 = l1, k2 = l1;
+        for (let j = l2; j <= r2; j++) {
+            // 假设数组为[-2,5,-1]，则其前缀和数组pre为 [0,-2,3,2]
+            // 所以，寻找两个下标i j，满足 两个下标之间的元素和在 [-2,2]之间 这个原始问题，
+            // 就可以转化为 在pre中找到两个下标i、j, 
+            // 满足i<j(注意：i==j时区间为空.因为ij对应的区间为(i,j]，是一个左开右闭的区间)、并且 lower<=pre[j]-pre[i]<=upper
+            // 整理后，pre[j]-upper <= pre[i] <= pre[j]- lower
+            // 当j固定时，也就是需要找到满足条件的i的取值范围
+
+            // 这个问题可以考虑在归并排序过程中进行处理，即原数组的区间被 划分为两个排序好的左右两个区间之后，进行区间和的计算
+            // l1  r1  l2 r2
+            // [-2,0]  [2,3]
+
+            // l1、r1和l2、r2分别是左右区间的左右边界，由于l1、r1所在区间在l2、r2所在区间的左侧
+            // 也就是左区间上面的每个数字下标 小于 右区间上面的每个数字的下标，这样的话，
+            // 我们可以遍历右区间上面的下标作为j的值，然后在l1~r1上面分别找到两个位置k1,k2
+            // 从左到右，找到第一个满足arr[k1] >= arr[j]-upper的位置，和第一个满足arr[k2] < arr[j]-lower
+            // 由于左区间是升序排序好的，那么可以得到k1<k2,
+            // 则在 k1~k2范围的所有下标都可以作为满足 pre[j]-lower<=pre[i] <=pre[j]- upper的i值，
+            // 这样就找到了当前j位置对应的满足条件的i的取值范围，那么遍历右区间上的所有的位置作为j，
+            // 就可以求出当前区间横跨 左右区间的 ij对数(区间和个数)，由于归并排序是递归的，那么左右区间的各自的ij对数 随之也求出来了
+
+            // 从左到右在递增的序列中找到第一个大于等于arr[j] - upper的位置
+            while (k1 <= r1 && arr[k1] < arr[j] - upper) k1++;  
+            // 从左到右在递增的序列中找到第一个小于arr[j] - lower的位置
+            while (k2 <= r1 && arr[k2] <= arr[j] - lower) k2++; 
+            // 那么在k1~k2范围的所有位置都可以作为i,与当前j组成一个区间,并且满足 pre[j]-upper <= pre[i] <= pre[j]- lower,至此完成解答
+            count += k2 - k1;
+        }
+    }
+    merge_sort(sumArr, 0, sumArr.length - 1);
+    return count;
+};
